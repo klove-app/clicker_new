@@ -4,6 +4,7 @@ import FileDisplay from './FileDisplay'
 import { readExcel } from '../lib/xlsx'
 import { parseActReport, parseInsurance, performClaudeReconciliation } from '../lib/claude-parser'
 import type { ReconciliationResult } from '../lib/claude-parser'
+import { analyzeFileWithAI_Enhanced, suggestFilePairs, type FileAnalysis, type FilePairSuggestion } from '../lib/file-matcher'
 import ResultsVisualization from './ResultsVisualization'
 
 type Props = {
@@ -23,6 +24,7 @@ type FileInfo = {
     sheets: number
     preview: any[]
   }
+  analysis?: FileAnalysis
 }
 
 type Step = 'upload' | 'analyze' | 'match' | 'results'
@@ -37,6 +39,7 @@ export default function StepByStepReconcile({ onComplete, onBack }: Props) {
   const [currentStep, setCurrentStep] = useState<Step>('upload')
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([])
   const [filePairs, setFilePairs] = useState<FilePair[]>([])
+  const [pairSuggestions, setPairSuggestions] = useState<FilePairSuggestion[]>([])
   const [processing, setProcessing] = useState(false)
   const [results, setResults] = useState<ReconciliationResult | null>(null)
 
@@ -51,6 +54,9 @@ export default function StepByStepReconcile({ onComplete, onBack }: Props) {
         const totalRows = excelData.reduce((sum, sheet) => sum + sheet.actualRowCount, 0)
         const totalColumns = Math.max(...excelData.map(sheet => sheet.actualColumnCount))
         
+        // Анализируем файл через ИИ для умного сопоставления
+        const analysis = await analyzeFileWithAI_Enhanced(file.name, excelData)
+        
         fileInfos.push({
           name: file.name,
           size: file.size,
@@ -62,12 +68,19 @@ export default function StepByStepReconcile({ onComplete, onBack }: Props) {
             columns: totalColumns,
             sheets: excelData.length,
             preview: excelData[0]?.data.slice(0, 3) || []
-          }
+          },
+          analysis
         })
       }
       
-      setUploadedFiles(prev => [...prev, ...fileInfos])
-      if (uploadedFiles.length + fileInfos.length >= 2) {
+      const newFiles = [...uploadedFiles, ...fileInfos]
+      setUploadedFiles(newFiles)
+      
+      // Автоматически генерируем предложения пар
+      if (newFiles.length >= 2) {
+        const analyses = newFiles.map(f => f.analysis).filter(Boolean) as FileAnalysis[]
+        const suggestions = suggestFilePairs(analyses)
+        setPairSuggestions(suggestions)
         setCurrentStep('analyze')
       }
     } catch (error) {
@@ -103,6 +116,23 @@ export default function StepByStepReconcile({ onComplete, onBack }: Props) {
 
   const handleRemovePair = (pairId: string) => {
     setFilePairs(prev => prev.filter(pair => pair.id !== pairId))
+  }
+
+  const handleAcceptSuggestion = (suggestion: FilePairSuggestion) => {
+    const file1 = uploadedFiles.find(f => f.analysis?.fileName === suggestion.file1.fileName)
+    const file2 = uploadedFiles.find(f => f.analysis?.fileName === suggestion.file2.fileName)
+    
+    if (file1 && file2) {
+      const newPair: FilePair = {
+        file1,
+        file2,
+        id: `${file1.name}_${file2.name}_${Date.now()}`
+      }
+      
+      setFilePairs(prev => [...prev, newPair])
+      // Удаляем принятое предложение
+      setPairSuggestions(prev => prev.filter(s => s !== suggestion))
+    }
   }
 
   const handleStartMatching = async () => {
@@ -383,6 +413,63 @@ export default function StepByStepReconcile({ onComplete, onBack }: Props) {
                           </div>
                         </div>
                       )}
+
+                      {/* Информация об анализе файла */}
+                      {file.analysis && (
+                        <div style={{
+                          background: '#f8f9fa',
+                          borderRadius: '6px',
+                          padding: '8px',
+                          marginBottom: '8px',
+                          fontSize: '12px'
+                        }}>
+                          <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
+                            <span style={{
+                              background: file.analysis.fileType === 'act' ? '#d1ecf1' : 
+                                         file.analysis.fileType === 'export' ? '#d4edda' : '#f8d7da',
+                              color: file.analysis.fileType === 'act' ? '#0c5460' : 
+                                     file.analysis.fileType === 'export' ? '#155724' : '#721c24',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontSize: '10px',
+                              fontWeight: '600'
+                            }}>
+                              {file.analysis.fileType === 'act' ? 'АКТ-ОТЧЕТ' : 
+                               file.analysis.fileType === 'export' ? 'ВЫГРУЗКА' : 'НЕОПРЕДЕЛЕН'}
+                            </span>
+                            {file.analysis.month && (
+                              <span style={{
+                                background: '#e7e3ff',
+                                color: '#5a4fcf',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                fontWeight: '600'
+                              }}>
+                                {file.analysis.month.toUpperCase()}
+                              </span>
+                            )}
+                            {file.analysis.group && (
+                              <span style={{
+                                background: '#fff3cd',
+                                color: '#856404',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                fontWeight: '600'
+                              }}>
+                                {file.analysis.group}
+                              </span>
+                            )}
+                          </div>
+                          {file.analysis.keywords.length > 0 && (
+                            <div style={{ color: '#6c757d' }}>
+                              Ключевые слова: {file.analysis.keywords.slice(0, 3).join(', ')}
+                              {file.analysis.keywords.length > 3 && '...'}
+                            </div>
+                          )}
+                        </div>
+                      )}
                       
                       <div style={{
                         fontSize: '12px',
@@ -396,7 +483,147 @@ export default function StepByStepReconcile({ onComplete, onBack }: Props) {
               </div>
             </div>
 
-            {/* Создание пар */}
+            {/* Умные предложения пар */}
+            {pairSuggestions.length > 0 && (
+              <div style={{
+                background: 'white',
+                borderRadius: '12px',
+                border: '1px solid #e9ecef',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  padding: '20px 24px',
+                  borderBottom: '1px solid #e9ecef',
+                  background: '#f0f8ff'
+                }}>
+                  <h3 style={{
+                    margin: '0',
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: '#212529'
+                  }}>
+                    🤖 Умные предложения пар
+                  </h3>
+                  <p style={{
+                    margin: '8px 0 0 0',
+                    fontSize: '14px',
+                    color: '#6c757d'
+                  }}>
+                    На основе анализа содержимого и названий файлов
+                  </p>
+                </div>
+                
+                <div style={{ padding: '20px 24px' }}>
+                  {pairSuggestions.slice(0, 3).map((suggestion, index) => (
+                    <div key={index} style={{
+                      border: `2px solid ${suggestion.confidence === 'high' ? '#28a745' : 
+                                            suggestion.confidence === 'medium' ? '#ffc107' : '#dc3545'}`,
+                      borderRadius: '8px',
+                      padding: '16px',
+                      marginBottom: '16px',
+                      background: suggestion.confidence === 'high' ? '#f8fff9' : 
+                                  suggestion.confidence === 'medium' ? '#fffef7' : '#fff5f5'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '12px'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          flex: 1
+                        }}>
+                          <div style={{
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#212529'
+                          }}>
+                            {suggestion.file1.fileName}
+                          </div>
+                          <div style={{ color: '#0d6efd' }}>↔</div>
+                          <div style={{
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#212529'
+                          }}>
+                            {suggestion.file2.fileName}
+                          </div>
+                        </div>
+                        
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}>
+                          <span style={{
+                            background: suggestion.confidence === 'high' ? '#d4edda' : 
+                                        suggestion.confidence === 'medium' ? '#fff3cd' : '#f8d7da',
+                            color: suggestion.confidence === 'high' ? '#155724' : 
+                                   suggestion.confidence === 'medium' ? '#856404' : '#721c24',
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}>
+                            {Math.round(suggestion.score * 100)}%
+                          </span>
+                          
+                          <button
+                            onClick={() => handleAcceptSuggestion(suggestion)}
+                            style={{
+                              background: '#28a745',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '6px 12px',
+                              fontSize: '12px',
+                              fontWeight: '500',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Принять
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div style={{
+                        fontSize: '12px',
+                        color: '#6c757d',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '8px'
+                      }}>
+                        {suggestion.reasons.map((reason, i) => (
+                          <span key={i} style={{
+                            background: '#e9ecef',
+                            padding: '2px 6px',
+                            borderRadius: '4px'
+                          }}>
+                            {reason}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {pairSuggestions.length > 3 && (
+                    <div style={{
+                      textAlign: 'center',
+                      color: '#6c757d',
+                      fontSize: '14px',
+                      fontStyle: 'italic'
+                    }}>
+                      ... и еще {pairSuggestions.length - 3} предложений
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Ручное создание пар */}
             <div style={{
               background: 'white',
               borderRadius: '12px',
@@ -414,14 +641,14 @@ export default function StepByStepReconcile({ onComplete, onBack }: Props) {
                   fontWeight: '600',
                   color: '#212529'
                 }}>
-                  Сопоставление файлов
+                  Ручное сопоставление
                 </h3>
                 <p style={{
                   margin: '8px 0 0 0',
                   fontSize: '14px',
                   color: '#6c757d'
                 }}>
-                  Создайте пары файлов для сопоставления данных
+                  Создайте пары файлов вручную
                 </p>
               </div>
               
