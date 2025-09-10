@@ -129,26 +129,39 @@ ${prompt.sampleRows.map((row, i) => `Строка ${i + 1}: ${row.join(' | ')}`)
 - recommendations: рекомендации для сопоставления`
 
     try {
-      // Обращаемся к Netlify Function вместо прямого API
-      const response = await fetch('/.netlify/functions/claude-analyze', {
+      // Прямое обращение к Claude API из браузера (dev режим)
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY || '',
+          'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-          fileName: prompt.fileName,
-          headers: prompt.headers,
-          sampleRows: prompt.sampleRows,
-          fileSize: prompt.fileSize
+          model: import.meta.env.VITE_ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
+          max_tokens: this.config.maxTokens,
+          system: systemPrompt,
+          messages: [{
+            role: 'user',
+            content: userPrompt
+          }]
         })
       })
 
       if (!response.ok) {
-        throw new Error(`Netlify Function error: ${response.status} ${response.statusText}`)
+        throw new Error(`Claude API error: ${response.status} ${response.statusText}`)
       }
 
-      const analysis = await response.json()
-      return analysis as ClaudeFileAnalysis
+      const data = await response.json()
+      const content = data.content[0]?.text
+
+      if (!content) {
+        throw new Error('Пустой ответ от Claude API')
+      }
+
+      // Парсим JSON ответ
+      const analysis = JSON.parse(content) as ClaudeFileAnalysis
+      return analysis
 
     } catch (error) {
       console.error('Ошибка анализа файла через Claude:', error)
@@ -324,25 +337,37 @@ ${fileAnalyses.map((analysis, i) => `
 }`
 
     try {
-      // Обращаемся к Netlify Function для создания отчета
-      const response = await fetch('/.netlify/functions/claude-report', {
+      // Прямое обращение к Claude API для создания отчета (dev режим)
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY || '',
+          'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-          reconciliationResults,
-          fileAnalyses,
-          fileNames
+          model: import.meta.env.VITE_ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
+          max_tokens: 6000, // Больше токенов для подробного отчета
+          system: systemPrompt,
+          messages: [{
+            role: 'user',
+            content: userPrompt
+          }]
         })
       })
 
       if (!response.ok) {
-        throw new Error(`Netlify Function error: ${response.status}`)
+        throw new Error(`Claude API error: ${response.status}`)
       }
 
-      const summary = await response.json()
-      return summary as ClaudeExecutiveSummary
+      const data = await response.json()
+      const content = data.content[0]?.text
+
+      if (!content) {
+        throw new Error('Пустой ответ от Claude API')
+      }
+
+      return JSON.parse(content) as ClaudeExecutiveSummary
 
     } catch (error) {
       console.error('Ошибка создания управленческой сводки:', error)

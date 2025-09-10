@@ -9,10 +9,14 @@
 
 ### 2. Добавьте переменные окружения:
 
+**В Netlify Dashboard → Site settings → Environment variables:**
+
 ```
-CLAUDE_API_KEY = your_claude_api_key_here
-CLAUDE_MODEL = claude-sonnet-4-20250514
+ANTHROPIC_API_KEY = your_claude_api_key_here
+ANTHROPIC_MODEL = claude-sonnet-4-20250514
 ```
+
+**Важно:** Используйте именно `ANTHROPIC_API_KEY` - это стандартное название для Claude API.
 
 ### 3. Настройка деплоя:
 

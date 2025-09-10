@@ -73,11 +73,11 @@ ${sampleRows.map((row: any[], i: number) => `Строка ${i + 1}: ${row.join('
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.CLAUDE_API_KEY || '',
+        'x-api-key': process.env.ANTHROPIC_API_KEY || '',
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514',
+        model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
         max_tokens: 4000,
         system: systemPrompt,
         messages: [{

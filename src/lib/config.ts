@@ -2,19 +2,21 @@ import { initializeClaude } from './claude-api'
 
 // Инициализация всех API сервисов
 export function initializeServices() {
-  // Проверяем доступность Claude API через Netlify Functions
+  // Проверяем доступность Claude API
   const claudeEnabled = import.meta.env.VITE_CLAUDE_API_ENABLED === 'true'
+  const claudeApiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
+  const claudeModel = import.meta.env.VITE_ANTHROPIC_MODEL || 'claude-sonnet-4-20250514'
 
-  if (claudeEnabled) {
-    // Инициализируем с пустыми параметрами - реальные ключи на сервере
+  if (claudeEnabled && claudeApiKey) {
+    // Инициализируем с реальными ключами для dev режима
     initializeClaude({
-      apiKey: 'netlify-function', // Заглушка
-      model: 'claude-sonnet-4-20250514',
+      apiKey: claudeApiKey,
+      model: claudeModel,
       maxTokens: 4000
     })
-    console.log('✅ Claude API инициализирован через Netlify Functions')
+    console.log('✅ Claude API инициализирован для dev режима:', claudeModel)
   } else {
-    console.warn('⚠️ Claude API отключен')
+    console.warn('⚠️ Claude API отключен или ключ не найден')
   }
 
   // Инициализация локального хранилища
@@ -24,7 +26,7 @@ export function initializeServices() {
 // Проверка доступности сервисов
 export function checkServicesAvailability() {
   const services = {
-    claude: import.meta.env.VITE_CLAUDE_API_ENABLED === 'true',
+    claude: import.meta.env.VITE_CLAUDE_API_ENABLED === 'true' && !!import.meta.env.VITE_ANTHROPIC_API_KEY,
     localStorage: typeof Storage !== 'undefined'
   }
 
