@@ -2,19 +2,19 @@ import { initializeClaude } from './claude-api'
 
 // Инициализация всех API сервисов
 export function initializeServices() {
-  // Инициализация Claude API
-  const claudeApiKey = import.meta.env.VITE_CLAUDE_API_KEY
-  const claudeModel = import.meta.env.VITE_CLAUDE_MODEL || 'claude-sonnet-4-20250514'
+  // Проверяем доступность Claude API через Netlify Functions
+  const claudeEnabled = import.meta.env.VITE_CLAUDE_API_ENABLED === 'true'
 
-  if (claudeApiKey) {
+  if (claudeEnabled) {
+    // Инициализируем с пустыми параметрами - реальные ключи на сервере
     initializeClaude({
-      apiKey: claudeApiKey,
-      model: claudeModel,
+      apiKey: 'netlify-function', // Заглушка
+      model: 'claude-sonnet-4-20250514',
       maxTokens: 4000
     })
-    console.log('✅ Claude API инициализирован:', claudeModel)
+    console.log('✅ Claude API инициализирован через Netlify Functions')
   } else {
-    console.warn('⚠️ Claude API ключ не найден в переменных окружения')
+    console.warn('⚠️ Claude API отключен')
   }
 
   // Здесь можно добавить инициализацию других сервисов (Supabase и т.д.)
@@ -23,7 +23,7 @@ export function initializeServices() {
 // Проверка доступности сервисов
 export function checkServicesAvailability() {
   const services = {
-    claude: !!import.meta.env.VITE_CLAUDE_API_KEY,
+    claude: import.meta.env.VITE_CLAUDE_API_ENABLED === 'true',
     supabase: !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
   }
 

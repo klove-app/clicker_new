@@ -40,6 +40,37 @@ export interface ClaudePairingSuggestion {
   recommendedAction: string
 }
 
+export interface ClaudeExecutiveSummary {
+  overview: string
+  keyFindings: string[]
+  dataQualityAssessment: {
+    completeness: number
+    accuracy: string
+    consistency: string
+    issues: string[]
+  }
+  reconciliationSummary: {
+    totalMatches: number
+    matchRate: number
+    significantDiscrepancies: string[]
+    riskAreas: string[]
+  }
+  businessInsights: {
+    trends: string[]
+    anomalies: string[]
+    recommendations: string[]
+  }
+  actionItems: {
+    immediate: string[]
+    followUp: string[]
+    longTerm: string[]
+  }
+  compliance: {
+    status: 'compliant' | 'issues' | 'critical'
+    notes: string[]
+  }
+}
+
 const DEFAULT_CONFIG: Partial<ClaudeConfig> = {
   model: 'claude-sonnet-4-20250514', // Claude Sonnet 4 - самая новая модель
   maxTokens: 4000
@@ -98,38 +129,26 @@ ${prompt.sampleRows.map((row, i) => `Строка ${i + 1}: ${row.join(' | ')}`)
 - recommendations: рекомендации для сопоставления`
 
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      // Обращаемся к Netlify Function вместо прямого API
+      const response = await fetch('/.netlify/functions/claude-analyze', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.config.apiKey,
-          'anthropic-version': '2023-06-01'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: this.config.model,
-          max_tokens: this.config.maxTokens,
-          system: systemPrompt,
-          messages: [{
-            role: 'user',
-            content: userPrompt
-          }]
+          fileName: prompt.fileName,
+          headers: prompt.headers,
+          sampleRows: prompt.sampleRows,
+          fileSize: prompt.fileSize
         })
       })
 
       if (!response.ok) {
-        throw new Error(`Claude API error: ${response.status} ${response.statusText}`)
+        throw new Error(`Netlify Function error: ${response.status} ${response.statusText}`)
       }
 
-      const data = await response.json()
-      const content = data.content[0]?.text
-
-      if (!content) {
-        throw new Error('Пустой ответ от Claude API')
-      }
-
-      // Парсим JSON ответ
-      const analysis = JSON.parse(content) as ClaudeFileAnalysis
-      return analysis
+      const analysis = await response.json()
+      return analysis as ClaudeFileAnalysis
 
     } catch (error) {
       console.error('Ошибка анализа файла через Claude:', error)
@@ -227,6 +246,140 @@ ${analyses.map((analysis, i) => `
       return []
     }
   }
+
+  async generateExecutiveSummary(
+    reconciliationResults: any,
+    fileAnalyses: ClaudeFileAnalysis[],
+    fileNames: string[]
+  ): Promise<ClaudeExecutiveSummary> {
+    const systemPrompt = `Ты - опытный финансовый аналитик и аудитор. 
+Создай управленческую сводку по результатам сверки финансовых данных.
+
+ТВОЯ ЗАДАЧА:
+1. Проанализировать результаты сопоставления данных
+2. Оценить качество и полноту данных
+3. Выявить ключевые находки и риски
+4. Дать практические рекомендации руководству
+5. Определить следующие шаги
+
+ФОРМАТ ОТВЕТА: JSON без дополнительного текста.
+
+ФОКУС НА:
+- Финансовые риски и возможности
+- Качество процессов учета
+- Соответствие требованиям
+- Операционные улучшения`
+
+    const userPrompt = `Проанализируй результаты сверки и создай управленческую сводку:
+
+ФАЙЛЫ В СВЕРКЕ:
+${fileNames.map((name, i) => `${i + 1}. ${name}`).join('\n')}
+
+АНАЛИЗ ФАЙЛОВ:
+${fileAnalyses.map((analysis, i) => `
+Файл ${i + 1}: ${fileNames[i]}
+- Тип: ${analysis.fileType}
+- Период: ${JSON.stringify(analysis.period)}
+- Организация: ${analysis.organization || 'не определена'}
+- Структура: ${analysis.dataStructure.keyFields.join(', ')}
+- Описание: ${analysis.contentSummary}
+`).join('\n')}
+
+РЕЗУЛЬТАТЫ СОПОСТАВЛЕНИЯ:
+- Найдено совпадений: ${reconciliationResults.matched?.length || 0}
+- Не сопоставлено актов: ${reconciliationResults.unmatched?.actReports?.length || 0}
+- Не сопоставлено страховок: ${reconciliationResults.unmatched?.insurance?.length || 0}
+- Процент совпадений: ${reconciliationResults.summary?.matchPercentage || 0}%
+
+Верни управленческую сводку в JSON формате:
+{
+  "overview": "общий обзор ситуации",
+  "keyFindings": ["ключевая находка 1", "ключевая находка 2"],
+  "dataQualityAssessment": {
+    "completeness": число от 0 до 1,
+    "accuracy": "оценка точности",
+    "consistency": "оценка согласованности", 
+    "issues": ["проблема 1", "проблема 2"]
+  },
+  "reconciliationSummary": {
+    "totalMatches": число,
+    "matchRate": процент,
+    "significantDiscrepancies": ["расхождение 1"],
+    "riskAreas": ["зона риска 1"]
+  },
+  "businessInsights": {
+    "trends": ["тренд 1"],
+    "anomalies": ["аномалия 1"], 
+    "recommendations": ["рекомендация 1"]
+  },
+  "actionItems": {
+    "immediate": ["срочное действие 1"],
+    "followUp": ["последующее действие 1"],
+    "longTerm": ["долгосрочное действие 1"]
+  },
+  "compliance": {
+    "status": "compliant|issues|critical",
+    "notes": ["замечание 1"]
+  }
+}`
+
+    try {
+      // Обращаемся к Netlify Function для создания отчета
+      const response = await fetch('/.netlify/functions/claude-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          reconciliationResults,
+          fileAnalyses,
+          fileNames
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Netlify Function error: ${response.status}`)
+      }
+
+      const summary = await response.json()
+      return summary as ClaudeExecutiveSummary
+
+    } catch (error) {
+      console.error('Ошибка создания управленческой сводки:', error)
+      
+      // Fallback отчет
+      return {
+        overview: 'Сверка данных выполнена. Подробный анализ недоступен.',
+        keyFindings: ['Базовое сопоставление данных завершено'],
+        dataQualityAssessment: {
+          completeness: 0.8,
+          accuracy: 'Требует проверки',
+          consistency: 'Частичная',
+          issues: ['ИИ-анализ недоступен']
+        },
+        reconciliationSummary: {
+          totalMatches: reconciliationResults.matched?.length || 0,
+          matchRate: reconciliationResults.summary?.matchPercentage || 0,
+          significantDiscrepancies: [],
+          riskAreas: ['Требуется ручная проверка']
+        },
+        businessInsights: {
+          trends: [],
+          anomalies: [],
+          recommendations: ['Проверьте результаты вручную']
+        },
+        actionItems: {
+          immediate: ['Просмотрите результаты сопоставления'],
+          followUp: ['Проверьте несопоставленные записи'],
+          longTerm: ['Настройте ИИ-анализ для лучших результатов']
+        },
+        compliance: {
+          status: 'issues',
+          notes: ['Анализ выполнен без ИИ-поддержки']
+        }
+      }
+    }
+  }
 }
 
 // Singleton instance
@@ -272,4 +425,18 @@ export async function suggestPairsWithAI(
   }
 
   return await claude.suggestPairs(analyses, fileNames)
+}
+
+export async function generateExecutiveReport(
+  reconciliationResults: any,
+  fileAnalyses: ClaudeFileAnalysis[],
+  fileNames: string[]
+): Promise<ClaudeExecutiveSummary | null> {
+  const claude = getClaudeInstance()
+  if (!claude) {
+    console.warn('Claude API не инициализирован')
+    return null
+  }
+
+  return await claude.generateExecutiveSummary(reconciliationResults, fileAnalyses, fileNames)
 }
