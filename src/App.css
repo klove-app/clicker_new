@@ -1,0 +1,378 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: #fafbfc;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  width: 100vw;
+  overflow-x: hidden;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+/* Стиль как в референсе */
+.card {
+  padding: 32px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  border-color: #e0e0e0;
+}
+
+/* Notion-style переключатели */
+.mode-switcher {
+  display: inline-flex;
+  background: #f1f3f4;
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid #e1e5e9;
+}
+
+.mode-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background: transparent;
+  color: #6b7280;
+}
+
+.mode-button.active {
+  background: white;
+  color: #1f2937;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.mode-button:hover:not(.active) {
+  color: #374151;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.summary {
+  text-align: left;
+}
+
+.join-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+table.preview {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+table.preview th {
+  border-bottom: 1px solid #444;
+  text-align: left;
+  padding: 8px;
+  background: #374151;
+  color: white;
+  font-weight: bold;
+}
+table.preview td {
+  padding: 4px;
+  border-bottom: 1px solid #333;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.history-scroll {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.history-item {
+  border-bottom: 1px solid #333;
+  padding: 8px 0;
+  font-size: 14px;
+}
+
+.history-item-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.history-item-time {
+  color: #888;
+}
+
+.history-item-details {
+  font-size: 12px;
+  color: #ccc;
+  margin: 4px 0 0 0;
+  white-space: pre-wrap;
+}
+
+.results-tabs {
+  display: flex;
+  gap: 10px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.tab-button {
+  padding: 8px 16px;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.tab-button:hover {
+  opacity: 0.8;
+}
+
+.results-table-container {
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.sticky-header {
+  position: sticky;
+  top: 0;
+  background: #374151;
+  z-index: 1;
+  color: white;
+}
+
+.record-card {
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  border: 1px solid;
+}
+
+.record-card.not-found-act {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.record-card.not-found-insurance {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+/* Кнопки в стиле референса */
+.modern-button {
+  background: #1f2937;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.modern-button:hover {
+  background: #111827;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modern-button:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Вторичная кнопка */
+.modern-button.secondary {
+  background: white;
+  color: #374151;
+  border: 1px solid #d0d7de;
+}
+
+.modern-button.secondary:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin: 24px 0;
+  width: 100%;
+}
+
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Notion-style статистические карточки */
+.stat-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e1e5e9;
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #d1d9e0;
+}
+
+.stat-number {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+/* Drag & Drop зона как в референсе */
+.file-upload-zone {
+  border: 2px dashed #d0d7de;
+  border-radius: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #fafbfc;
+}
+
+.file-upload-zone:hover {
+  border-color: #4f46e5;
+  background: #f8faff;
+}
+
+.file-upload-zone.dragging {
+  border-color: #4f46e5;
+  background: #f0f4ff;
+  transform: scale(1.01);
+}
+
+/* Инпуты в стиле референса */
+.modern-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.modern-input:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+/* Теги/бэджи как в референсе */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  gap: 4px;
+}
+
+.tag.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.tag.error {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.tag.warning {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.tag.info {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
