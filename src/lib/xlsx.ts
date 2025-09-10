@@ -4,6 +4,8 @@ export interface ExcelData {
   data: any[][];
   headers: string[];
   sheetName: string;
+  actualRowCount: number;
+  actualColumnCount: number;
 }
 
 export async function readExcel(file: File): Promise<ExcelData[]> {
@@ -23,12 +25,27 @@ export async function readExcel(file: File): Promise<ExcelData[]> {
           
           if (jsonData.length > 0) {
             const headers = jsonData[0] as string[];
-            const data = jsonData.slice(1);
+            const rawData = jsonData.slice(1);
+            
+            // Фильтруем только строки с данными (не пустые)
+            const filteredData = rawData.filter(row => 
+              row && row.some(cell => cell !== null && cell !== undefined && cell !== '')
+            );
+            
+            // Считаем реальное количество столбцов с данными
+            const actualColumnCount = Math.max(
+              headers.filter(h => h !== null && h !== undefined && h !== '').length,
+              ...filteredData.map(row => 
+                row.filter(cell => cell !== null && cell !== undefined && cell !== '').length
+              )
+            );
             
             sheets.push({
-              data,
+              data: filteredData,
               headers,
-              sheetName
+              sheetName,
+              actualRowCount: filteredData.length,
+              actualColumnCount
             });
           }
         });

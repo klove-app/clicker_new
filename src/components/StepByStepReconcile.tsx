@@ -27,9 +27,16 @@ type FileInfo = {
 
 type Step = 'upload' | 'analyze' | 'match' | 'results'
 
+type FilePair = {
+  file1: FileInfo
+  file2: FileInfo
+  id: string
+}
+
 export default function StepByStepReconcile({ onComplete, onBack }: Props) {
   const [currentStep, setCurrentStep] = useState<Step>('upload')
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([])
+  const [filePairs, setFilePairs] = useState<FilePair[]>([])
   const [processing, setProcessing] = useState(false)
   const [results, setResults] = useState<ReconciliationResult | null>(null)
 
@@ -41,8 +48,8 @@ export default function StepByStepReconcile({ onComplete, onBack }: Props) {
       
       for (const file of files) {
         const excelData = await readExcel(file)
-        const totalRows = excelData.reduce((sum, sheet) => sum + sheet.data.length, 0)
-        const totalColumns = Math.max(...excelData.map(sheet => sheet.headers.length))
+        const totalRows = excelData.reduce((sum, sheet) => sum + sheet.actualRowCount, 0)
+        const totalColumns = Math.max(...excelData.map(sheet => sheet.actualColumnCount))
         
         fileInfos.push({
           name: file.name,
@@ -72,20 +79,45 @@ export default function StepByStepReconcile({ onComplete, onBack }: Props) {
 
   const handleRemoveFile = (index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index))
+    // Удаляем пары, которые содержат этот файл
+    setFilePairs(prev => prev.filter(pair => 
+      pair.file1 !== uploadedFiles[index] && pair.file2 !== uploadedFiles[index]
+    ))
     if (uploadedFiles.length <= 2) {
       setCurrentStep('upload')
     }
   }
 
+  const handleCreatePair = (file1Index: number, file2Index: number) => {
+    const file1 = uploadedFiles[file1Index]
+    const file2 = uploadedFiles[file2Index]
+    
+    const newPair: FilePair = {
+      file1,
+      file2,
+      id: `${file1.name}_${file2.name}_${Date.now()}`
+    }
+    
+    setFilePairs(prev => [...prev, newPair])
+  }
+
+  const handleRemovePair = (pairId: string) => {
+    setFilePairs(prev => prev.filter(pair => pair.id !== pairId))
+  }
+
   const handleStartMatching = async () => {
-    if (uploadedFiles.length < 2) return
+    if (filePairs.length === 0) return
     
     setProcessing(true)
     setCurrentStep('match')
     
     try {
-      const file1Data = await readExcel(uploadedFiles[0].file)
-      const file2Data = await readExcel(uploadedFiles[1].file)
+      // Пока обрабатываем только первую пару для простоты
+      // В будущем можно добавить обработку всех пар
+      const firstPair = filePairs[0]
+      
+      const file1Data = await readExcel(firstPair.file1.file)
+      const file2Data = await readExcel(firstPair.file2.file)
       
       const actReports = await parseActReport(file1Data[0].data)
       const insurance = await parseInsurance(file2Data[0].data)
@@ -97,8 +129,8 @@ export default function StepByStepReconcile({ onComplete, onBack }: Props) {
       
       if (onComplete) {
         onComplete(reconciliationResults, {
-          file1: uploadedFiles[0].file,
-          file2: uploadedFiles[1].file
+          file1: firstPair.file1.file,
+          file2: firstPair.file2.file
         })
       }
     } catch (error) {
@@ -243,6 +275,7 @@ export default function StepByStepReconcile({ onComplete, onBack }: Props) {
 
         {currentStep === 'analyze' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Анализ файлов */}
             <div style={{
               background: 'white',
               borderRadius: '12px',
@@ -274,34 +307,53 @@ export default function StepByStepReconcile({ onComplete, onBack }: Props) {
                     <div key={index} style={{
                       border: '1px solid #e9ecef',
                       borderRadius: '8px',
-                      padding: '16px'
+                      padding: '16px',
+                      position: 'relative'
                     }}>
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
+                        justifyContent: 'space-between',
                         marginBottom: '12px'
                       }}>
-                        <div style={{
-                          background: '#e9ecef',
-                          color: '#495057',
-                          borderRadius: '4px',
-                          padding: '4px 6px',
-                          fontSize: '10px',
-                          fontWeight: '600',
-                          marginRight: '8px'
-                        }}>
-                          {file.name.split('.').pop()?.toUpperCase()}
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <div style={{
+                            background: '#e9ecef',
+                            color: '#495057',
+                            borderRadius: '4px',
+                            padding: '4px 6px',
+                            fontSize: '10px',
+                            fontWeight: '600',
+                            marginRight: '8px'
+                          }}>
+                            {file.name.split('.').pop()?.toUpperCase()}
+                          </div>
+                          <div style={{
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            color: '#212529',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {file.name}
+                          </div>
                         </div>
-                        <div style={{
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          color: '#212529',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {file.name}
-                        </div>
+                        
+                        <button
+                          onClick={() => handleRemoveFile(index)}
+                          style={{
+                            background: 'transparent',
+                            border: '1px solid #dc3545',
+                            borderRadius: '4px',
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            color: '#dc3545',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Удалить
+                        </button>
                       </div>
                       
                       {file.stats && (
@@ -341,6 +393,158 @@ export default function StepByStepReconcile({ onComplete, onBack }: Props) {
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+
+            {/* Создание пар */}
+            <div style={{
+              background: 'white',
+              borderRadius: '12px',
+              border: '1px solid #e9ecef',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #e9ecef',
+                background: '#f8f9fa'
+              }}>
+                <h3 style={{
+                  margin: '0',
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#212529'
+                }}>
+                  Сопоставление файлов
+                </h3>
+                <p style={{
+                  margin: '8px 0 0 0',
+                  fontSize: '14px',
+                  color: '#6c757d'
+                }}>
+                  Создайте пары файлов для сопоставления данных
+                </p>
+              </div>
+              
+              <div style={{ padding: '24px' }}>
+                {uploadedFiles.length >= 2 && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      marginBottom: '12px'
+                    }}>
+                      <select 
+                        id="file1Select"
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          border: '1px solid #dee2e6',
+                          borderRadius: '6px',
+                          fontSize: '14px'
+                        }}
+                      >
+                        <option value="">Выберите первый файл</option>
+                        {uploadedFiles.map((file, index) => (
+                          <option key={index} value={index}>
+                            {file.name} ({file.stats?.rows} строк)
+                          </option>
+                        ))}
+                      </select>
+                      
+                      <div style={{ color: '#6c757d' }}>↔</div>
+                      
+                      <select 
+                        id="file2Select"
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          border: '1px solid #dee2e6',
+                          borderRadius: '6px',
+                          fontSize: '14px'
+                        }}
+                      >
+                        <option value="">Выберите второй файл</option>
+                        {uploadedFiles.map((file, index) => (
+                          <option key={index} value={index}>
+                            {file.name} ({file.stats?.rows} строк)
+                          </option>
+                        ))}
+                      </select>
+                      
+                      <button
+                        onClick={() => {
+                          const file1Select = document.getElementById('file1Select') as HTMLSelectElement
+                          const file2Select = document.getElementById('file2Select') as HTMLSelectElement
+                          const file1Index = parseInt(file1Select.value)
+                          const file2Index = parseInt(file2Select.value)
+                          
+                          if (!isNaN(file1Index) && !isNaN(file2Index) && file1Index !== file2Index) {
+                            handleCreatePair(file1Index, file2Index)
+                            file1Select.value = ''
+                            file2Select.value = ''
+                          }
+                        }}
+                        style={{
+                          background: '#0d6efd',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '8px 16px',
+                          fontSize: '14px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Создать пару
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Список созданных пар */}
+                {filePairs.length > 0 && (
+                  <div>
+                    <h4 style={{ fontSize: '16px', marginBottom: '12px', color: '#212529' }}>
+                      Созданные пары ({filePairs.length})
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {filePairs.map((pair) => (
+                        <div key={pair.id} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '12px',
+                          background: '#f8f9fa',
+                          borderRadius: '8px',
+                          border: '1px solid #e9ecef'
+                        }}>
+                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ fontSize: '14px', color: '#212529' }}>
+                              <strong>{pair.file1.name}</strong> ({pair.file1.stats?.rows} строк)
+                            </div>
+                            <div style={{ color: '#0d6efd' }}>↔</div>
+                            <div style={{ fontSize: '14px', color: '#212529' }}>
+                              <strong>{pair.file2.name}</strong> ({pair.file2.stats?.rows} строк)
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleRemovePair(pair.id)}
+                            style={{
+                              background: 'transparent',
+                              border: '1px solid #dc3545',
+                              borderRadius: '4px',
+                              padding: '4px 8px',
+                              fontSize: '12px',
+                              color: '#dc3545',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Удалить
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 
                 <div style={{
                   marginTop: '24px',
@@ -348,20 +552,20 @@ export default function StepByStepReconcile({ onComplete, onBack }: Props) {
                 }}>
                   <button
                     onClick={handleStartMatching}
-                    disabled={uploadedFiles.length < 2}
+                    disabled={filePairs.length === 0}
                     style={{
-                      background: uploadedFiles.length >= 2 ? '#0d6efd' : '#6c757d',
+                      background: filePairs.length > 0 ? '#0d6efd' : '#6c757d',
                       color: 'white',
                       border: 'none',
                       borderRadius: '8px',
                       padding: '12px 24px',
                       fontSize: '16px',
                       fontWeight: '500',
-                      cursor: uploadedFiles.length >= 2 ? 'pointer' : 'not-allowed',
+                      cursor: filePairs.length > 0 ? 'pointer' : 'not-allowed',
                       transition: 'background-color 0.2s'
                     }}
                   >
-                    Начать сопоставление
+                    Начать сопоставление ({filePairs.length} пар)
                   </button>
                 </div>
               </div>
