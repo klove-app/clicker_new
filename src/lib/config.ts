@@ -17,14 +17,15 @@ export function initializeServices() {
     console.warn('⚠️ Claude API отключен')
   }
 
-  // Здесь можно добавить инициализацию других сервисов (Supabase и т.д.)
+  // Инициализация локального хранилища
+  console.log('✅ Локальное хранилище готово к использованию')
 }
 
 // Проверка доступности сервисов
 export function checkServicesAvailability() {
   const services = {
     claude: import.meta.env.VITE_CLAUDE_API_ENABLED === 'true',
-    supabase: !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
+    localStorage: typeof Storage !== 'undefined'
   }
 
   return services

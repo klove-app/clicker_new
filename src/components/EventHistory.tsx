@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react'
-import { getStoredEvents, clearStoredEvents, type LogEvent } from '../lib/supabase'
+// import { getStoredEvents, clearStoredEvents, type LogEvent } from '../lib/supabase' // Временно отключено
+
+type LogEvent = {
+  id: string
+  timestamp: string
+  event: string
+  details?: any
+}
 
 export default function EventHistory() {
   const [events, setEvents] = useState<LogEvent[]>([])
@@ -7,7 +14,10 @@ export default function EventHistory() {
 
   useEffect(() => {
     if (isOpen) {
-      setEvents(getStoredEvents())
+      // Загружаем события из localStorage
+      const stored = localStorage.getItem('app_events')
+      const events = stored ? JSON.parse(stored) : []
+      setEvents(events)
     }
   }, [isOpen])
 
@@ -26,12 +36,16 @@ export default function EventHistory() {
       <div className="history-header">
         <h3>История операций ({events.length})</h3>
         <div className="history-buttons">
-          <button onClick={() => setEvents(getStoredEvents())}>
+          <button onClick={() => {
+            const stored = localStorage.getItem('app_events')
+            const events = stored ? JSON.parse(stored) : []
+            setEvents(events)
+          }}>
             Обновить
           </button>
           <button 
             onClick={() => {
-              clearStoredEvents()
+              localStorage.removeItem('app_events')
               setEvents([])
             }}
           >

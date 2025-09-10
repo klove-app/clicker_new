@@ -3,7 +3,7 @@ import { readExcel } from '../lib/xlsx'
 import { parseActReport, parseInsurance, performClaudeReconciliation, type MatchResult } from '../lib/claude-parser'
 import { exportClaudeResults } from '../lib/claude-excel-export'
 import NotionTable from './NotionTable'
-import { logEvent } from '../lib/supabase'
+// import { logEvent } from '../lib/supabase' // Временно отключено - используем localStorage
 
 type Props = {
   onComplete?: (results: any, files: { file1: File; file2: File }) => void
@@ -46,13 +46,14 @@ export default function SingleReconcile({ onComplete }: Props) {
             onComplete(claudeCmp, { file1: upload1, file2: upload2 })
           }
 
-          logEvent({ action: 'claude_compare_done', details: {
+          // logEvent({ action: 'claude_compare_done', details: { // Временно отключено
+          console.log('Сверка завершена:', {
             matches: claudeCmp.matches.length,
             notFoundInAct: claudeCmp.notFoundInAct.length,
             notFoundInInsurance: claudeCmp.notFoundInInsurance.length,
             formulaErrors: claudeCmp.formulaErrors.length,
             matchPercentage: Math.round(claudeCmp.matches.length / insuranceData.length * 100)
-          }})
+          })
           
           setStatus(`✅ Сверка завершена! Найдено ${claudeCmp.matches.length} совпадений из ${insuranceData.length} записей (${Math.round(claudeCmp.matches.length / insuranceData.length * 100)}%)`)
         } catch (error) {
