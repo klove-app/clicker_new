@@ -9,7 +9,7 @@ type TableColumn = {
 }
 
 type Props = {
-  data: MatchResult[]
+  data: any[]
   title: string
   subtitle?: string
   maxRows?: number

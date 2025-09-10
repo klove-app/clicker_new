@@ -5,6 +5,8 @@ type LogEvent = {
   id: string
   timestamp: string
   event: string
+  action: string
+  created_at: string
   details?: any
 }
 

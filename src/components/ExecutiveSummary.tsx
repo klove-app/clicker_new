@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import type { ClaudeExecutiveSummary } from '../lib/claude-api'
 
 type Props = {

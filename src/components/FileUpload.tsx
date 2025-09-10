@@ -1,4 +1,4 @@
-import { useRef, useState, DragEvent, ChangeEvent } from 'react'
+import { useRef, useState, type DragEvent, type ChangeEvent } from 'react'
 
 type Props = {
   onFilesSelected: (files: File[]) => void
@@ -18,13 +18,11 @@ export default function FileUpload({
   multiple = true
 }: Props) {
   const [isDragging, setIsDragging] = useState(false)
-  const [dragCounter, setDragCounter] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleDragEnter = (e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setDragCounter(prev => prev + 1)
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
       setIsDragging(true)
     }
@@ -33,13 +31,10 @@ export default function FileUpload({
   const handleDragLeave = (e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setDragCounter(prev => {
-      const newCount = prev - 1
-      if (newCount === 0) {
-        setIsDragging(false)
-      }
-      return newCount
-    })
+    // Проверяем, что покидаем именно контейнер, а не дочерний элемент
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragging(false)
+    }
   }
 
   const handleDragOver = (e: DragEvent) => {
@@ -51,7 +46,6 @@ export default function FileUpload({
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(false)
-    setDragCounter(0)
 
     const files = Array.from(e.dataTransfer.files)
     handleFiles(files)

@@ -18,13 +18,13 @@ export async function analyzeFileContent(file: File): Promise<FileContentInfo> {
     const sheets = await readExcel(file)
     const sheet = sheets[0] // Берем первый лист
     
-    if (!sheet || sheet.rows.length === 0) {
+    if (!sheet || sheet.data.length === 0) {
       throw new Error('Пустой файл или нет данных')
     }
 
     console.log(`🔍 Анализ содержимого файла "${file.name}":`, {
       headers: sheet.headers,
-      rowCount: sheet.rows.length
+      rowCount: sheet.data.length
     })
 
     // Поиск колонок с датами
@@ -48,12 +48,12 @@ export async function analyzeFileContent(file: File): Promise<FileContentInfo> {
     // Анализ диапазона дат
     let dateRange = { start: null as Date | null, end: null as Date | null }
     if (dateColumns.length > 0) {
-      const dates = sheet.rows
-        .map(row => row[dateColumns[0]])
-        .filter(date => date)
-        .map(date => new Date(String(date)))
-        .filter(date => !isNaN(date.getTime()))
-        .sort((a, b) => a.getTime() - b.getTime())
+      const dates = sheet.data
+        .map((row: any) => row[dateColumns[0]])
+        .filter((date: any) => date)
+        .map((date: any) => new Date(String(date)))
+        .filter((date: Date) => !isNaN(date.getTime()))
+        .sort((a: Date, b: Date) => a.getTime() - b.getTime())
       
       if (dates.length > 0) {
         dateRange = { start: dates[0], end: dates[dates.length - 1] }
@@ -63,15 +63,15 @@ export async function analyzeFileContent(file: File): Promise<FileContentInfo> {
     // Анализ диапазона сумм
     let amountRange = { min: 0, max: 0, avg: 0 }
     if (amountColumns.length > 0) {
-      const amounts = sheet.rows
-        .map(row => Number(row[amountColumns[0]]) || 0)
-        .filter(amount => amount > 0)
+      const amounts = sheet.data
+        .map((row: any) => Number(row[amountColumns[0]]) || 0)
+        .filter((amount: number) => amount > 0)
       
       if (amounts.length > 0) {
         amountRange = {
           min: Math.min(...amounts),
           max: Math.max(...amounts),
-          avg: amounts.reduce((a, b) => a + b, 0) / amounts.length
+          avg: amounts.reduce((a: number, b: number) => a + b, 0) / amounts.length
         }
       }
     }
@@ -79,18 +79,18 @@ export async function analyzeFileContent(file: File): Promise<FileContentInfo> {
     // Создание "подписи" содержимого для сравнения
     const contentSignature = [
       sheet.headers.slice(0, 5).join('|'),
-      `rows:${sheet.rows.length}`,
+      `rows:${sheet.data.length}`,
       `amounts:${amountRange.min}-${amountRange.max}`,
       dateRange.start ? `date:${dateRange.start.getFullYear()}-${dateRange.start.getMonth() + 1}` : ''
     ].filter(Boolean).join('::')
 
     const result: FileContentInfo = {
       fileName: file.name,
-      recordCount: sheet.rows.length,
+      recordCount: sheet.data.length,
       dateRange,
       amountRange,
       keyColumns: [...dateColumns, ...amountColumns],
-      sampleData: sheet.rows.slice(0, 3),
+      sampleData: sheet.data.slice(0, 3),
       contentSignature
     }
 

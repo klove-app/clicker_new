@@ -1,5 +1,5 @@
 import type { ExcelData } from './xlsx'
-import { analyzeFileWithAI, suggestPairsWithAI, type ClaudeFileAnalysis, type ClaudePairingSuggestion } from './claude-api'
+import { analyzeFileWithAI } from './claude-api'
 
 export interface FileAnalysis {
   fileName: string

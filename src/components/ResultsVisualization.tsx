@@ -139,10 +139,9 @@ export default function ResultsVisualization({ results, files, pairIndex }: Prop
               <h3 style={{ color: '#1f2937', marginBottom: '12px' }}>Статистика сопоставления</h3>
               <ul style={{ 
                 listStyle: 'none', 
-                padding: '0', 
+                padding: '16px', 
                 background: '#f9fafb', 
-                borderRadius: '6px',
-                padding: '16px'
+                borderRadius: '6px'
               }}>
                 <li style={{ marginBottom: '6px' }}>Найдено {results.matched.length} совпадений</li>
                 <li style={{ marginBottom: '6px' }}>Всего записей: {totalRecords}</li>
@@ -156,10 +155,9 @@ export default function ResultsVisualization({ results, files, pairIndex }: Prop
                 <h3 style={{ color: '#dc2626', marginBottom: '12px' }}>Обнаруженные проблемы</h3>
                 <ul style={{ 
                   listStyle: 'none', 
-                  padding: '0', 
+                  padding: '16px', 
                   background: '#fef2f2', 
-                  borderRadius: '6px',
-                  padding: '16px'
+                  borderRadius: '6px'
                 }}>
                   <li style={{ marginBottom: '6px' }}>{results.unmatched.actReports.length} записей не найдено в акт-отчете</li>
                   <li style={{ marginBottom: '6px' }}>{results.unmatched.insurance.length} записей не найдено в страховках</li>

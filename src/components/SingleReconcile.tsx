@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { readExcel } from '../lib/xlsx'
-import { parseActReport, parseInsurance, performClaudeReconciliation, type MatchResult } from '../lib/claude-parser'
+import { parseActReport, parseInsurance, performClaudeReconciliation } from '../lib/claude-parser'
 import { exportClaudeResults } from '../lib/claude-excel-export'
 import NotionTable from './NotionTable'
 // import { logEvent } from '../lib/supabase' // Временно отключено - используем localStorage
@@ -13,12 +13,7 @@ export default function SingleReconcile({ onComplete }: Props) {
   const [upload1, setUpload1] = useState<File | null>(null)
   const [upload2, setUpload2] = useState<File | null>(null)
   const [status, setStatus] = useState<string>('')
-  const [claudeResult, setClaudeResult] = useState<{
-    matches: MatchResult[]
-    notFoundInAct: any[]
-    notFoundInInsurance: any[]
-    formulaErrors: MatchResult[]
-  } | null>(null)
+  const [claudeResult, setClaudeResult] = useState<any | null>(null)
 
   const handleReconcile = async () => {
     if (!upload1 || !upload2) return
@@ -35,10 +30,10 @@ export default function SingleReconcile({ onComplete }: Props) {
         try {
           console.log('🚀 Запуск точного алгоритма Клода...')
           
-          const insuranceData = parseInsurance(left.rows)
-          const actReportData = parseActReport(right.rawRows || [])
+          const insuranceData = await parseInsurance(left.data)
+          const actReportData = await parseActReport(right.data)
           
-          const claudeCmp = performClaudeReconciliation(insuranceData, actReportData)
+          const claudeCmp = await performClaudeReconciliation(insuranceData, actReportData)
           setClaudeResult(claudeCmp)
 
           // Уведомляем родительский компонент
@@ -48,14 +43,13 @@ export default function SingleReconcile({ onComplete }: Props) {
 
           // logEvent({ action: 'claude_compare_done', details: { // Временно отключено
           console.log('Сверка завершена:', {
-            matches: claudeCmp.matches.length,
-            notFoundInAct: claudeCmp.notFoundInAct.length,
-            notFoundInInsurance: claudeCmp.notFoundInInsurance.length,
-            formulaErrors: claudeCmp.formulaErrors.length,
-            matchPercentage: Math.round(claudeCmp.matches.length / insuranceData.length * 100)
+            matches: claudeCmp.matched?.length || 0,
+            notFoundInAct: claudeCmp.unmatched?.actReports?.length || 0,
+            notFoundInInsurance: claudeCmp.unmatched?.insurance?.length || 0,
+            matchPercentage: claudeCmp.summary?.matchPercentage || 0
           })
           
-          setStatus(`✅ Сверка завершена! Найдено ${claudeCmp.matches.length} совпадений из ${insuranceData.length} записей (${Math.round(claudeCmp.matches.length / insuranceData.length * 100)}%)`)
+          setStatus(`✅ Сверка завершена! Найдено ${claudeCmp.matched?.length || 0} совпадений (${claudeCmp.summary?.matchPercentage || 0}%)`)
         } catch (error) {
           setStatus('Ошибка при сверке: ' + String(error))
           console.error(error)

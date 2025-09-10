@@ -28,15 +28,15 @@ export async function readExcel(file: File): Promise<ExcelData[]> {
             const rawData = jsonData.slice(1);
             
             // Фильтруем только строки с данными (не пустые)
-            const filteredData = rawData.filter(row => 
-              row && row.some(cell => cell !== null && cell !== undefined && cell !== '')
-            );
+            const filteredData = rawData.filter((row: any) => 
+              row && Array.isArray(row) && row.some((cell: any) => cell !== null && cell !== undefined && cell !== '')
+            ) as any[][];
             
             // Считаем реальное количество столбцов с данными
             const actualColumnCount = Math.max(
-              headers.filter(h => h !== null && h !== undefined && h !== '').length,
-              ...filteredData.map(row => 
-                row.filter(cell => cell !== null && cell !== undefined && cell !== '').length
+              headers.filter((h: any) => h !== null && h !== undefined && h !== '').length,
+              ...filteredData.map((row: any[]) => 
+                row.filter((cell: any) => cell !== null && cell !== undefined && cell !== '').length
               )
             );
             
