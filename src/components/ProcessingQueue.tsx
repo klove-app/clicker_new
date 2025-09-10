@@ -52,19 +52,19 @@ export default function ProcessingQueue({ pairs, onAllComplete }: Props) {
           readExcel(pair.actReport.file)
         ])
 
-        const insuranceData = parseInsurance(f1[0].rows)
-        const actReportData = parseActReport(f2[0].rawRows || [])
+        const insuranceData = await parseInsurance(f1[0].data)
+        const actReportData = await parseActReport(f2[0].data)
         
         // Выполняем сверку
-        const claudeResult = performClaudeReconciliation(insuranceData, actReportData)
+        const claudeResult = await performClaudeReconciliation(actReportData, insuranceData)
         
         // Анализ результата для Claude API
         let aiAnalysis = ''
-        const matchRate = claudeResult.matches.length / (claudeResult.matches.length + claudeResult.notFoundInAct.length)
+        const matchRate = (claudeResult.matched?.length || 0) / ((claudeResult.matched?.length || 0) + (claudeResult.unmatched?.actReports?.length || 0))
         
         if (matchRate < 0.5) {
           aiAnalysis = '🚨 Низкий процент совпадений - требует проверки'
-        } else if (claudeResult.formulaErrors.length > claudeResult.matches.length * 0.3) {
+        } else if (matchRate > 0.9) {
           aiAnalysis = '⚠️ Много ошибок в формулах - проверьте расчеты'
         } else if (matchRate > 0.9) {
           aiAnalysis = '✅ Отличное качество сверки'

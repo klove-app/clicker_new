@@ -33,7 +33,7 @@ export default function SingleReconcile({ onComplete }: Props) {
           const insuranceData = await parseInsurance(left.data)
           const actReportData = await parseActReport(right.data)
           
-          const claudeCmp = await performClaudeReconciliation(insuranceData, actReportData)
+          const claudeCmp = await performClaudeReconciliation(actReportData, insuranceData)
           setClaudeResult(claudeCmp)
 
           // Уведомляем родительский компонент
@@ -189,8 +189,7 @@ export default function SingleReconcile({ onComplete }: Props) {
                 onClick={() => exportClaudeResults(
                   claudeResult, 
                   { 
-                    file1Name: upload1?.name || 'выгрузка', 
-                    file2Name: upload2?.name || 'акт-отчет' 
+                    filename: `${upload1?.name || 'выгрузка'}_${upload2?.name || 'акт-отчет'}.xlsx`
                   }
                 )}
               >

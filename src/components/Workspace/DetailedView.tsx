@@ -55,8 +55,7 @@ export default function DetailedView({ data, onBack }: Props) {
                 exportClaudeResults(
                   fullResults,
                   {
-                    file1Name: record.files.insurance.name,
-                    file2Name: record.files.actReport.name
+                    filename: `${record.files.insurance.name}_${record.files.actReport.name}_detailed.xlsx`
                   }
                 )
               }

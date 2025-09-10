@@ -40,7 +40,7 @@ export default function StepByStepReconcile({ onComplete, onBack }: Props) {
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([])
   const [filePairs, setFilePairs] = useState<FilePair[]>([])
   const [pairSuggestions, setPairSuggestions] = useState<FilePairSuggestion[]>([])
-  const [processing, setProcessing] = useState(false)
+  const [, setProcessing] = useState(false)
   const [results, setResults] = useState<ReconciliationResult | null>(null)
 
   const handleFilesSelected = async (files: File[]) => {
